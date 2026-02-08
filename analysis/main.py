@@ -12,7 +12,7 @@ def main():
     axs[0].set_title("Spiking activity")
 
     sns.heatmap(df_voltage.T, cmap="viridis", cbar_kws={'label': 'Voltage (mV)'}, ax=axs[1])
-    axs[0].set_title("Membrane potentials")
+    axs[1].set_title("Membrane potentials")
     axs[1].set_xlabel("Time Step")
 
     fig.suptitle('Attractor network simulation')
