@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io::{Write, BufWriter};
+
 //--------------------------------------------------------------------------------------------------
 //-------------------       Simple LIF neuron implementation        --------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -159,28 +162,66 @@ fn pulse_at_center(strength: f32, num_neurons: i32) -> Vec<f32> {
     external_current
 }
 
+fn save_to_csv<T: std::fmt::Display>(data: &Vec<Vec<T>>, filename: &str) {
+    let file = File::create(filename).expect("Unable to create file.");
+    let mut writer = BufWriter::new(file);
+
+    for row in data {
+        let rowstring: String = row.iter().map(|element| element.to_string())
+                                          .collect::<Vec<String>>()
+                                          .join(",");
+        writeln!(writer, "{}", rowstring).expect("Unable to write data row.");
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 //-----------------------------         MAIN            --------------------------------------------
 //--------------------------------------------------------------------------------------------------
 
 fn main() {
+    // neural population parameters
     let num_neurons:i32 = 100;
     let v_rest:f32 = 0.0;
     let v_thresh:f32 = 40.0;
-    let tau:f32 = 10.0;
+    let tau:f32 = 5.0;
 
+    // Simulation parameters
+    let dt: f32 = 1.0;
+    let num_timesteps: i32 = 1000;
+    
+    // Define neural population and connectivity
     let mut field: NeuralField = NeuralField::new(num_neurons, v_rest, v_thresh, tau);
-    field.set_mexican_hat_weights_circ(1.0, 1.0, 0.5, 3.0);
+    field.set_mexican_hat_weights_circ(200.0, 5.0, 100.0, 50.0);
 
-    let dt: f32 = 0.1;
+    // define current pulses
     let background_current: Vec<f32> = vec![0.0; num_neurons as usize];
-    let pulse_current = pulse_at_center(5.0, num_neurons);
-    for index in 0..1000 {
-        if index%100 == 0 { 
+    let pulse_current = pulse_at_center(50.0, num_neurons);
+
+    // Buffer for result logging
+    let mut voltage_buffer: Vec<Vec<f32>> = Vec::with_capacity(num_timesteps as usize);
+    let mut spiking_buffer: Vec<Vec<bool>> = Vec::with_capacity(num_timesteps as usize);
+
+    // Simulation loop
+    for index in 0..num_timesteps {
+        if index == 0 { 
             field.step(dt, &pulse_current);
         } else { 
             field.step(dt, &background_current); 
         }
-        println!("Voltage of Neuron 1: {}", field.population[50].v)
+        
+        // Store voltage in buffer
+        let voltage_at_t: Vec<f32> = field.population.iter().map(|neuron| neuron.v).collect();
+        voltage_buffer.push(voltage_at_t);
+
+        // Store spiking activity to buffer
+        if field.buffer_a_is_prev {
+            spiking_buffer.push(field.spike_buffer_b.clone());
+        } else {
+            spiking_buffer.push(field.spike_buffer_a.clone());
+        }
     };
+
+    save_to_csv(&voltage_buffer, &"output/voltage_data.csv");
+    save_to_csv(&spiking_buffer, &"output/spiking_data.csv");
+
 }
