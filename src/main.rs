@@ -36,6 +36,7 @@ struct NeuralField {
     weights: Vec<f32>,          // size (num_neurons x num_neurons)
 }
 
+#[allow(dead_code)]
 impl NeuralField {
     fn new(num_neurons: i32, v_rest: f32, v_thresh: f32, tau: f32) -> Self {
         Self {
@@ -56,6 +57,34 @@ impl NeuralField {
             }
         }
     }
+
+    fn set_mexican_hat_weights(&mut self, strength_e: f32, sigma_e: f32, 
+                                          strength_i: f32, sigma_i: f32) {
+        for source in 0..self.num_neurons {
+            for target in 0..self.num_neurons {
+                let distance: f32 = ((source - target) as f32).abs();
+                let weight_e: f32 = strength_e * (-distance.powi(2) / (2.0*sigma_e.powi(2))).exp();
+                let weight_i: f32 = strength_i * (-distance.powi(2) / (2.0*sigma_i.powi(2))).exp();
+                self.weights[calc_index(source, target, self.num_neurons)] = weight_e - weight_i;
+            }
+        }
+    }
+
+    fn set_mexican_hat_weights_circ(&mut self, strength_e: f32, sigma_e: f32, 
+                                               strength_i: f32, sigma_i: f32) {
+        for source in 0..self.num_neurons {
+            for target in 0..self.num_neurons {
+                // compute circular distance here
+                let mut distance: f32 = ((source - target) as f32).abs();
+                distance = distance.min(self.num_neurons as f32 - distance);
+
+                let weight_e: f32 = strength_e * (-distance.powi(2) / (2.0*sigma_e.powi(2))).exp();
+                let weight_i: f32 = strength_i * (-distance.powi(2) / (2.0*sigma_i.powi(2))).exp();
+                self.weights[calc_index(source, target, self.num_neurons)] = weight_e - weight_i;
+            }
+        }
+    }
+
 
     fn step(&mut self, dt: f32, external_current: &Vec<f32>) {
         // Unpack fields from self to allow independent borrowing
@@ -108,7 +137,7 @@ fn main() {
     let tau:f32 = 10.0;
 
     let mut field: NeuralField = NeuralField::new(num_neurons, v_rest, v_thresh, tau);
-    field.set_gaussian_weights(1.0, 1.0);
+    field.set_mexican_hat_weights_circ(1.0, 1.0, 0.5, 3.0);
 
     let dt: f32 = 0.1;
     let external_current: Vec<f32> = vec![5.0; num_neurons as usize];
