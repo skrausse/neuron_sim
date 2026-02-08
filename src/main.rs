@@ -191,7 +191,7 @@ fn main() {
     
     // Define neural population and connectivity
     let mut field: NeuralField = NeuralField::new(num_neurons, v_rest, v_thresh, tau);
-    field.set_mexican_hat_weights_circ(200.0, 5.0, 100.0, 50.0);
+    field.set_mexican_hat_weights_circ(200.0, 3.0, 50.0, 30.0);
 
     // define current pulses
     let background_current: Vec<f32> = vec![0.0; num_neurons as usize];
@@ -199,7 +199,7 @@ fn main() {
 
     // Buffer for result logging
     let mut voltage_buffer: Vec<Vec<f32>> = Vec::with_capacity(num_timesteps as usize);
-    let mut spiking_buffer: Vec<Vec<bool>> = Vec::with_capacity(num_timesteps as usize);
+    let mut spiking_buffer: Vec<Vec<i32>> = Vec::with_capacity(num_timesteps as usize);
 
     // Simulation loop
     for index in 0..num_timesteps {
@@ -214,11 +214,13 @@ fn main() {
         voltage_buffer.push(voltage_at_t);
 
         // Store spiking activity to buffer
-        if field.buffer_a_is_prev {
-            spiking_buffer.push(field.spike_buffer_b.clone());
+        let spikes_at_t: Vec<i32> = if field.buffer_a_is_prev {
+            field.spike_buffer_b.iter().map(|&s| s as i32).collect()
         } else {
-            spiking_buffer.push(field.spike_buffer_a.clone());
-        }
+            field.spike_buffer_a.iter().map(|&s| s as i32).collect()
+        };
+
+        spiking_buffer.push(spikes_at_t);
     };
 
     save_to_csv(&voltage_buffer, &"output/voltage_data.csv");
