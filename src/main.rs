@@ -27,7 +27,7 @@ impl LIF {
 
     fn step(&mut self, dt: f32, input_current: f32) -> bool {
         let mut spike: bool = false;
-        self.v = self.v + (dt / self.tau) * (self.v_rest - self.v) + input_current;
+        self.v = self.v + (dt / self.tau) * (self.v_rest - self.v + input_current);
         if self.v > self.v_thresh {
             self.v = self.v_rest;
             spike = true;
@@ -41,7 +41,7 @@ impl LIF {
 //--------------------------------------------------------------------------------------------------
 
 struct NeuralField {
-    num_neurons: i32,
+    num_neurons: usize,
     population: Vec<LIF>,       // size (num_neurons)
     spike_buffer_a: Vec<bool>,  // size (num_neurons)
     spike_buffer_b: Vec<bool>,  // size (num_neurons)
@@ -53,14 +53,14 @@ struct NeuralField {
 
 #[allow(dead_code)]
 impl NeuralField {
-    fn new(num_neurons: i32, v_rest: f32, v_thresh: f32, tau: f32) -> Self {
+    fn new(num_neurons: usize, v_rest: f32, v_thresh: f32, tau: f32) -> Self {
         Self {
             num_neurons: num_neurons, 
-            population: vec![LIF::new(v_rest, v_thresh, tau); num_neurons as usize], 
-            spike_buffer_a: vec![false; num_neurons as usize], 
-            spike_buffer_b: vec![false; num_neurons as usize], 
+            population: vec![LIF::new(v_rest, v_thresh, tau); num_neurons], 
+            spike_buffer_a: vec![false; num_neurons], 
+            spike_buffer_b: vec![false; num_neurons], 
             buffer_a_is_prev: true,
-            weights: vec![0.0; (num_neurons * num_neurons) as usize]} // (target, source)
+            weights: vec![0.0; num_neurons * num_neurons]} // (target, source)
     }
 
     fn set_gaussian_weights(&mut self, strength: f32, sigma: f32) {
@@ -90,7 +90,7 @@ impl NeuralField {
         for source in 0..self.num_neurons {
             for target in 0..self.num_neurons {
                 // compute circular distance here
-                let mut distance: f32 = ((source - target) as f32).abs();
+                let mut distance: f32 = (source as f32 - target as f32).abs();
                 distance = distance.min(self.num_neurons as f32 - distance);
 
                 let weight_e: f32 = strength_e * (-distance.powi(2) / (2.0*sigma_e.powi(2))).exp();
@@ -114,7 +114,7 @@ impl NeuralField {
 
         // declare immutable data fields
         let weights: &Vec<f32> = &*weights;
-        let num_neurons: &i32 = &*num_neurons;
+        let num_neurons: &usize = &*num_neurons;
 
         // Now decide which is read and which is write using the unpacked variables
         let (read_buffer, write_buffer) = if *buffer_a_is_prev {
@@ -127,14 +127,14 @@ impl NeuralField {
         for target in 0..*num_neurons {
             let mut internal_current: f32 = 0.0;
             for source in 0..*num_neurons {
-                if read_buffer[source as usize] {
+                if read_buffer[source] {
                     internal_current = internal_current 
                                        + weights[calc_index(source, target, *num_neurons)];
                 }
             }
 
-            let input_current: f32 = internal_current + external_current[target as usize];
-            write_buffer[target as usize] = population[target as usize].step(dt, input_current);
+            let input_current: f32 = internal_current + external_current[target];
+            write_buffer[target] = population[target].step(dt, input_current);
         }
         
         *buffer_a_is_prev = !*buffer_a_is_prev; // flip flag
@@ -146,18 +146,18 @@ impl NeuralField {
 //-----------------------       Helper Functions       ---------------------------------------------
 //--------------------------------------------------------------------------------------------------
 
-fn calc_index(source: i32, target: i32, num_neurons: i32) -> usize {
-    (target * num_neurons + source) as usize
+fn calc_index(source: usize, target: usize, num_neurons: usize) -> usize {
+    target * num_neurons + source
 }
 
-fn pulse_at_pos(strength: f32, pos: usize, num_neurons:i32) -> Vec<f32> {
-    let mut external_current: Vec<f32> = vec![0.0; num_neurons as usize];
+fn pulse_at_pos(strength: f32, pos: usize, num_neurons:usize) -> Vec<f32> {
+    let mut external_current: Vec<f32> = vec![0.0; num_neurons];
     external_current[pos] = strength;
     external_current
 }
 
-fn pulse_at_center(strength: f32, num_neurons: i32) -> Vec<f32> {
-    let pos: usize = (num_neurons / 2) as usize;
+fn pulse_at_center(strength: f32, num_neurons: usize) -> Vec<f32> {
+    let pos: usize = num_neurons / 2;
     let external_current = pulse_at_pos(strength, pos, num_neurons);
     external_current
 }
@@ -180,7 +180,7 @@ fn save_to_csv<T: std::fmt::Display>(data: &Vec<Vec<T>>, filename: &str) {
 
 fn main() {
     // neural population parameters
-    let num_neurons:i32 = 100;
+    let num_neurons:usize = 100;
     let v_rest:f32 = 0.0;
     let v_thresh:f32 = 40.0;
     let tau:f32 = 5.0;
@@ -203,7 +203,7 @@ fn main() {
 
     // Simulation loop
     for index in 0..num_timesteps {
-        if index == 0 { 
+        if index<10 { 
             field.step(dt, &pulse_current);
         } else { 
             field.step(dt, &background_current); 
