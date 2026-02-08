@@ -1,3 +1,7 @@
+//--------------------------------------------------------------------------------------------------
+//-------------------       Simple LIF neuron implementation        --------------------------------
+//--------------------------------------------------------------------------------------------------
+
 #[derive(Clone, Copy)]
 struct LIF {
     v: f32,
@@ -5,6 +9,8 @@ struct LIF {
     v_thresh: f32,
     tau: f32,
 }
+
+//--------------------------------------------------------------------------------------------------
 
 impl LIF {
     fn new(v_rest: f32, v_thresh: f32, tau: f32) -> Self {
@@ -27,6 +33,10 @@ impl LIF {
     }
 }
 
+//--------------------------------------------------------------------------------------------------
+//--------------------      Neural Population implementation        --------------------------------
+//--------------------------------------------------------------------------------------------------
+
 struct NeuralField {
     num_neurons: i32,
     population: Vec<LIF>,       // size (num_neurons)
@@ -35,6 +45,8 @@ struct NeuralField {
     buffer_a_is_prev: bool,     // To avoid allocating memory, we do A-B buffering
     weights: Vec<f32>,          // size (num_neurons x num_neurons)
 }
+
+//--------------------------------------------------------------------------------------------------
 
 #[allow(dead_code)]
 impl NeuralField {
@@ -126,9 +138,30 @@ impl NeuralField {
     }
 }
 
+
+//--------------------------------------------------------------------------------------------------
+//-----------------------       Helper Functions       ---------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
 fn calc_index(source: i32, target: i32, num_neurons: i32) -> usize {
     (target * num_neurons + source) as usize
 }
+
+fn pulse_at_pos(strength: f32, pos: usize, num_neurons:i32) -> Vec<f32> {
+    let mut external_current: Vec<f32> = vec![0.0; num_neurons as usize];
+    external_current[pos] = strength;
+    external_current
+}
+
+fn pulse_at_center(strength: f32, num_neurons: i32) -> Vec<f32> {
+    let pos: usize = (num_neurons / 2) as usize;
+    let external_current = pulse_at_pos(strength, pos, num_neurons);
+    external_current
+}
+
+//--------------------------------------------------------------------------------------------------
+//-----------------------------         MAIN            --------------------------------------------
+//--------------------------------------------------------------------------------------------------
 
 fn main() {
     let num_neurons:i32 = 100;
@@ -140,10 +173,14 @@ fn main() {
     field.set_mexican_hat_weights_circ(1.0, 1.0, 0.5, 3.0);
 
     let dt: f32 = 0.1;
-    let external_current: Vec<f32> = vec![5.0; num_neurons as usize];
-    
-    for _ in 0..1000 {
-        field.step(dt, &external_current);
-        println!("Voltage of Neuron 1: {}", field.population[0].v)
+    let background_current: Vec<f32> = vec![0.0; num_neurons as usize];
+    let pulse_current = pulse_at_center(5.0, num_neurons);
+    for index in 0..1000 {
+        if index%100 == 0 { 
+            field.step(dt, &pulse_current);
+        } else { 
+            field.step(dt, &background_current); 
+        }
+        println!("Voltage of Neuron 1: {}", field.population[50].v)
     };
 }
