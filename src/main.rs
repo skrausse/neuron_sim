@@ -1,55 +1,61 @@
-use crate::{utils::pulse_at_pos, weights::get_mexican_hat_weights_circ};
-
 mod lif;
 mod weights;
 mod field;
 mod utils;
+mod config;
 
 use field::NeuralField;
+use std::fs;
+use crate::{utils::pulse_at_pos, weights::get_mexican_hat_weights_circ};
 use utils::{pulse_at_center, save_to_csv};
+use config::Config;
 
 //--------------------------------------------------------------------------------------------------
 //-----------------------------         MAIN            --------------------------------------------
 //--------------------------------------------------------------------------------------------------
 
 fn main() {
-    // neural population parameters
-    let num_neurons:usize = 100;
-    let v_rest:f32 = 0.0;
-    let v_thresh:f32 = 40.0;
-    let tau:f32 = 10.0;
-    let strength_e:f32 = 250.0;
-    let strength_i:f32 = 50.0;
-    let sigma_e:f32 = 10.0;
-    let sigma_i:f32 = 40.0;
-    let stimulation_length: usize = 100;
-
-    // Simulation parameters
-    let dt: f32 = 1.0;
-    let num_timesteps: usize = 1000;
+    // Read config file
+    // Read config file
+    let config_content = fs::read_to_string("config.toml")
+        .expect("Failed to read config.toml");
+    let config: Config = toml::from_str(&config_content)
+        .expect("Failed to parse TOML");
     
     // Define neural population and connectivity
-    let weights: Vec<f32> = get_mexican_hat_weights_circ(num_neurons, strength_e, sigma_e, 
-                                                                      strength_i, sigma_i);
-    let mut field: NeuralField = NeuralField::new(num_neurons, v_rest, v_thresh, tau, weights);
+    let weights: Vec<f32> = get_mexican_hat_weights_circ(config.neuron.num_neurons, 
+                                                         config.weights.strength_e, 
+                                                         config.weights.sigma_e,
+                                                         config.weights.strength_i, 
+                                                         config.weights.sigma_i);
+
+    let mut field: NeuralField = NeuralField::new(config.neuron.num_neurons, 
+                                                  config.neuron.v_rest, 
+                                                  config.neuron.v_thresh, 
+                                                  config.neuron.tau, 
+                                                  weights);
     
     // define current pulses
-    let background_current: Vec<f32> = vec![0.0; num_neurons];
-    let pulse_current = pulse_at_center(50.0, num_neurons);
-    let second_pulse_current = pulse_at_pos(50.0, 80, num_neurons);
+    let background_current: Vec<f32> = vec![config.simulation.background_strength; 
+                                            config.neuron.num_neurons];
+    let pulse_current = pulse_at_center(config.simulation.first_pulse_strength, 
+                                                  config.neuron.num_neurons);
+    let second_pulse_current = pulse_at_pos(config.simulation.second_pulse_strength, 
+                                                      80, 
+                                                      config.neuron.num_neurons);
 
     // Buffer for result logging
-    let mut voltage_buffer: Vec<Vec<f32>> = Vec::with_capacity(num_timesteps);
-    let mut spiking_buffer: Vec<Vec<i32>> = Vec::with_capacity(num_timesteps);
+    let mut voltage_buffer: Vec<Vec<f32>> = Vec::with_capacity(config.simulation.num_timesteps);
+    let mut spiking_buffer: Vec<Vec<i32>> = Vec::with_capacity(config.simulation.num_timesteps);
 
     // Simulation loop
-    for index in 0..num_timesteps {
-        if index<stimulation_length { 
-            field.step(dt, &pulse_current);
-        } else if  (index > 500) && (index < 500 + stimulation_length) {
-            field.step(dt, &second_pulse_current)
+    for index in 0..config.simulation.num_timesteps {
+        if index<config.simulation.stimulation_length { 
+            field.step(config.simulation.dt, &pulse_current);
+        } else if  (index > 500) && (index < 500 + config.simulation.stimulation_length) {
+            field.step(config.simulation.dt, &second_pulse_current)
         } else { 
-            field.step(dt, &background_current); 
+            field.step(config.simulation.dt, &background_current); 
         }
         
         // Store voltage in buffer
