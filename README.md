@@ -11,8 +11,27 @@ This small project of mine is my excuse to get rusty. I want to learn some Rust 
 - main.sh               # Wrapper shell script to execute the simulation and python analysis in one complete run.
 
 
+## Version 0.2.1. - Getting towards multiple neuron types
 
-## Version 0.1
+A next exciting step is to make the simulator more general. In principle I want to move a way from one single neuron type with one single population connectivity.
+Rather, I would like to spawn an arbitrary amount of populations that each have one of many neuron-types that could be implemented.
+To get towards that goal, I: 
+
+- [x] Implemented a refractory LIF (RefLIF) neuron as a second neuron type and a test case
+- [x] Created more general coding structure to have a trait 'neuron' that is handled by the neural population (prev. neural field) class.
+- [x] Tested the simulation for both LIF and RefLIF neuron types, it is now as simple as switching a single line of code to construct a different neuron type.
+
+### Next step in the 0.2.x release
+
+- [ ] In the future, I would like to declare this with just a single flag in the config file, so that would be the immediate next open to-do. 
+
+### Towards 0.3.x
+
+After having this implemented, I think it would be great to try and figure out, whether we can have multiple neuron populations talking to each other.
+
+---
+
+## Version 0.1 - A first simulator
 
 For a very first simulator version, this seems to be quite promising already. Here is a list of things that are implemented in the very first version:
 

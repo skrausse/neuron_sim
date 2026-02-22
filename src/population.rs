@@ -1,9 +1,11 @@
-use crate::lif::LIF;
+use crate::neuron::Neuron;
 use crate::utils::calc_index;
 
-pub struct NeuralField {
+
+
+pub struct Population<N: Neuron> {
     pub num_neurons: usize,
-    pub population: Vec<LIF>,       // size (num_neurons)
+    pub neurons: Vec<N>,       // size (num_neurons)
     pub spike_buffer_a: Vec<bool>,  // size (num_neurons)
     pub spike_buffer_b: Vec<bool>,  // size (num_neurons)
     pub buffer_a_is_prev: bool,     // To avoid allocating memory, we do A-B buffering
@@ -13,11 +15,18 @@ pub struct NeuralField {
 //--------------------------------------------------------------------------------------------------
 
 
-impl NeuralField {
-    pub fn new(num_neurons: usize, v_rest: f32, v_thresh: f32, tau: f32, weights: Vec<f32>) -> Self {
-        Self {
+impl <N: Neuron> Population<N> {
+    pub fn new<F>(num_neurons: usize, weights: Vec<f32>, mut constructor: F) -> Self 
+    where F: FnMut() -> N 
+    {
+        let mut neurons = Vec::with_capacity(num_neurons);
+        for _ in 0..num_neurons {
+            neurons.push(constructor());
+        }
+
+    Self {
             num_neurons: num_neurons, 
-            population: vec![LIF::new(v_rest, v_thresh, tau); num_neurons], 
+            neurons: neurons,
             spike_buffer_a: vec![false; num_neurons], 
             spike_buffer_b: vec![false; num_neurons], 
             buffer_a_is_prev: true,
@@ -27,9 +36,9 @@ impl NeuralField {
 
     pub fn step(&mut self, dt: f32, external_current: &[f32]) {
         // Unpack fields from self to allow independent borrowing
-        let NeuralField {
+        let Population {
             num_neurons,
-            population,
+            neurons,
             spike_buffer_a,
             spike_buffer_b,
             buffer_a_is_prev,
@@ -58,7 +67,7 @@ impl NeuralField {
             }
 
             let input_current: f32 = internal_current + external_current[target];
-            write_buffer[target] = population[target].step(dt, input_current);
+            write_buffer[target] = neurons[target].step(dt, input_current);
         }
         
         *buffer_a_is_prev = !*buffer_a_is_prev; // flip flag
