@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{Write, BufWriter};
+use std::path::Path;
 
 //--------------------------------------------------------------------------------------------------
 
@@ -25,7 +26,7 @@ pub fn pulse_at_center(strength: f32, num_neurons: usize) -> Vec<f32> {
 
 //--------------------------------------------------------------------------------------------------
 
-pub fn save_to_csv<T: std::fmt::Display>(data: &Vec<Vec<T>>, filename: &str) {
+pub fn save_to_csv<T: std::fmt::Display>(data: &Vec<Vec<T>>, filename: &Path) {
     let file = File::create(filename).expect("Unable to create file.");
     let mut writer = BufWriter::new(file);
 

@@ -30,5 +30,7 @@ pub struct SimParams {
     pub stimulation_length: usize,
     pub background_strength: f32,
     pub first_pulse_strength: f32,
+    pub first_pulse_start: usize,
     pub second_pulse_strength: f32,
+    pub second_pulse_start: usize,
 }

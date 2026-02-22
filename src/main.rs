@@ -4,21 +4,34 @@ mod field;
 mod utils;
 mod config;
 
-use field::NeuralField;
 use std::fs;
-use crate::{utils::pulse_at_pos, weights::get_mexican_hat_weights_circ};
-use utils::{pulse_at_center, save_to_csv};
+use std::env;
+use std::path::Path;
+
+use utils::{pulse_at_center, save_to_csv, pulse_at_pos};
+use weights::{get_mexican_hat_weights_circ};
 use config::Config;
+use field::NeuralField;
 
 //--------------------------------------------------------------------------------------------------
 //-----------------------------         MAIN            --------------------------------------------
 //--------------------------------------------------------------------------------------------------
 
 fn main() {
+    // get commandline args
+    let args: Vec<String> = env::args().collect();
+    let output_path  = args.get(1)
+                                 .map(|s| s.as_str())
+                                 .unwrap_or("output/");
+                                
+    let config_path  = args.get(2)
+                                 .map(|s| s.as_str())
+                                 .unwrap_or("default_params.toml");
+    
     // Read config file
-    // Read config file
-    let config_content = fs::read_to_string("config.toml")
-        .expect("Failed to read config.toml");
+    let config_content = fs::read_to_string(config_path)
+        .expect(&format!("Failed to read {}", config_path));
+
     let config: Config = toml::from_str(&config_content)
         .expect("Failed to parse TOML");
     
@@ -50,10 +63,14 @@ fn main() {
 
     // Simulation loop
     for index in 0..config.simulation.num_timesteps {
-        if index<config.simulation.stimulation_length { 
+        if (index > config.simulation.first_pulse_start) && 
+           (index < config.simulation.first_pulse_start + config.simulation.stimulation_length) {
             field.step(config.simulation.dt, &pulse_current);
-        } else if  (index > 500) && (index < 500 + config.simulation.stimulation_length) {
-            field.step(config.simulation.dt, &second_pulse_current)
+
+        } else if (index > config.simulation.second_pulse_start) && 
+                  (index < config.simulation.second_pulse_start + config.simulation.stimulation_length) {
+            field.step(config.simulation.dt, &second_pulse_current);
+
         } else { 
             field.step(config.simulation.dt, &background_current); 
         }
@@ -72,7 +89,11 @@ fn main() {
         spiking_buffer.push(spikes_at_t);
     };
 
-    save_to_csv(&voltage_buffer, &"output/voltage_data.csv");
-    save_to_csv(&spiking_buffer, &"output/spiking_data.csv");
+    let v_file = Path::new(output_path).join("voltage_data.csv");
+    let s_file = Path::new(output_path).join("spiking_data.csv");
+
+    // Pass as a reference. Rust coerces &PathBuf to &Path automatically.
+    save_to_csv(&voltage_buffer, &v_file);
+    save_to_csv(&spiking_buffer, &s_file);
 
 }

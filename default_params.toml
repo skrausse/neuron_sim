@@ -11,9 +11,16 @@ sigma_e = 10.0
 sigma_i = 40.0
 
 [simulation]
+# Simulation loop parameters
 dt = 1.0
 num_timesteps = 1000
+
+# External network stimulation parameters
+stimulation_length = 100                # Type: usize
 background_strength = 0.0
+
 first_pulse_strength = 50.0
+first_pulse_start = 0                   # Type: usize
+
 second_pulse_strength = 50.0
-stimulation_length = 100
+second_pulse_start = 500                # Type: usize
