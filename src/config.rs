@@ -8,11 +8,20 @@ pub struct Config {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum NeuronChoice {
+    LIF,
+    RefLIF,
+}
+
+#[derive(Deserialize)]
 pub struct NeuronParams {
+    pub neuron_type: NeuronChoice,
     pub num_neurons: usize,
     pub v_rest: f32,
     pub v_thresh: f32,
     pub tau: f32,
+    pub tau_ref: f32,
 }
 
 #[derive(Deserialize)]

@@ -12,7 +12,11 @@ use utils::{pulse_at_center, save_to_csv, pulse_at_pos};
 use weights::{get_mexican_hat_weights_circ};
 use config::Config;
 use population::Population;
-use neuron::{LIF, RefLIF};
+use neuron::{LIF,RefLIF};
+
+use crate::config::NeuronChoice;
+use crate::neuron::Neuron;
+use crate::neuron::NeuronType;
 
 //--------------------------------------------------------------------------------------------------
 //-----------------------------         MAIN            --------------------------------------------
@@ -43,19 +47,24 @@ fn main() {
                                                          config.weights.strength_i, 
                                                          config.weights.sigma_i);
 
-    // let mut pop = Population::new(config.neuron.num_neurons, 
-    //                                                  weights, 
-    //                                                  || LIF::new(config.neuron.v_rest, 
-    //                                                                          config.neuron.v_thresh, 
-    //                                                                          config.neuron.tau));
+    let mut pop = Population::new(config.neuron.num_neurons, weights, || {
+        match config.neuron.neuron_type {
+            NeuronChoice::RefLIF => {
+                NeuronType::Ref(RefLIF::new(config.neuron.v_rest, 
+                                            config.neuron.v_thresh, 
+                                            config.neuron.tau, 
+                                            config.neuron.tau_ref))    
 
-    let mut pop = Population::new(config.neuron.num_neurons, 
-                                                      weights, 
-                                                      || RefLIF::new(config.neuron.v_rest, 
-                                                                                 config.neuron.v_thresh, 
-                                                                                 config.neuron.tau, 
-                                                                                 5.0));
-    
+            },
+            NeuronChoice::LIF => {
+                NeuronType::Lif(LIF::new(config.neuron.v_rest, 
+                                         config.neuron.v_thresh, 
+                                         config.neuron.tau))    
+            },
+        }
+    }
+    );
+
     // define current pulses
     let background_current: Vec<f32> = vec![config.simulation.background_strength; 
                                             config.neuron.num_neurons];
@@ -76,7 +85,8 @@ fn main() {
             pop.step(config.simulation.dt, &pulse_current);
 
         } else if (index > config.simulation.second_pulse_start) && 
-                  (index < config.simulation.second_pulse_start + config.simulation.stimulation_length) {
+                  (index < config.simulation.second_pulse_start 
+                           + config.simulation.stimulation_length) {
             pop.step(config.simulation.dt, &second_pulse_current);
 
         } else { 
@@ -84,7 +94,10 @@ fn main() {
         }
         
         // Store voltage in buffer
-        let voltage_at_t: Vec<f32> = pop.neurons.iter().map(|neuron| neuron.v).collect();
+        let voltage_at_t: Vec<f32> = pop.neurons.iter()
+                                                .map(|neuron| neuron.get_voltage())
+                                                .collect();
+        
         voltage_buffer.push(voltage_at_t);
 
         // Store spiking activity to buffer

@@ -10,6 +10,9 @@ This small project of mine is my excuse to get rusty. I want to learn some Rust 
 - default_params.toml   # Parameter settings to be changed for specific runs
 - main.sh               # Wrapper shell script to execute the simulation and python analysis in one complete run.
 
+## Version 0.2.2 - Robust multi-neuron-type implementation
+
+In the file `neurons.rs`, there are now all neuron-definitions together with all the setup needed to integrate with the main simulation. The `config.rs` code sets up the corresponding namespace for easy selection of the correct neurons through the config file. All of this is handled using enum operations to select between the different versions, making it easily extendable. 
 
 ## Version 0.2.1. - Getting towards multiple neuron types
 
@@ -23,11 +26,11 @@ To get towards that goal, I:
 
 ### Next step in the 0.2.x release
 
-- [ ] In the future, I would like to declare this with just a single flag in the config file, so that would be the immediate next open to-do. 
+- [x] In the future, I would like to declare this with just a single flag in the config file, so that would be the immediate next open to-do. 
 
 ### Towards 0.3.x
 
-After having this implemented, I think it would be great to try and figure out, whether we can have multiple neuron populations talking to each other.
+After having this implemented, I think it would be great to try and figure out, whether we can have multiple neuron populations talking to each other. But actually, a first step in that direction would most likely be defining inputs and weights externally. After that milestone, we have a truly general neural population simulator and we can think about hooking up multiple populations.
 
 ---
 

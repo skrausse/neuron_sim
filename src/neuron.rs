@@ -4,7 +4,7 @@ pub trait Neuron {
 }
 
 //--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
+//-------------------   Leaky integrate and Fire Neuron    -----------------------------------------
 //--------------------------------------------------------------------------------------------------
 
 #[derive(Clone, Copy)]
@@ -51,30 +51,30 @@ impl Neuron for LIF {
 }
 
 //--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
+//-------------------   Refractory Leaky integrate and Fire Neuron    ------------------------------
 //--------------------------------------------------------------------------------------------------
 
 #[derive(Clone, Copy)]
 pub struct RefLIF {
     pub v: f32,
-    pub tau_refrac: f32,
+    pub tau_ref: f32,
     v_rest: f32,
     v_thresh: f32,
     tau: f32,
-    t_refrac: f32, 
+    t_ref: f32, 
 }
 
 //--------------------------------------------------------------------------------------------------
 
 impl RefLIF {
-    pub fn new(v_rest: f32, v_thresh: f32, tau: f32, tau_refrac:f32) -> Self {
+    pub fn new(v_rest: f32, v_thresh: f32, tau: f32, tau_ref:f32) -> Self {
         Self {
             v: v_rest,
-            tau_refrac: tau_refrac,
+            tau_ref: tau_ref,
             v_rest: v_rest,
             v_thresh: v_thresh,
             tau: tau,
-            t_refrac: -1.0,
+            t_ref: -1.0,
         }
     }
 
@@ -82,16 +82,16 @@ impl RefLIF {
         let mut spike: bool = false;
 
         // Update refractory time:
-        self.t_refrac -= dt;
+        self.t_ref -= dt;
 
         // Update voltage when not in refractory time.
-        if self.t_refrac < 0.0 {
+        if self.t_ref < 0.0 {
             self.v = self.v + (dt / self.tau) * (self.v_rest - self.v + input_current);
         }
 
         // If spike, reset refractory time and voltage and emit a spike
         if self.v > self.v_thresh {
-            self.t_refrac = self.tau_refrac;
+            self.t_ref = self.tau_ref;
             self.v = self.v_rest;
             spike = true;
         }
@@ -108,5 +108,30 @@ impl Neuron for RefLIF {
 
     fn get_voltage(&self) -> f32 {
         self.v
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+// Define a general NeuronType enum object that handles the selection between different types
+pub enum NeuronType {
+    Lif(LIF),
+    Ref(RefLIF),
+}
+
+impl Neuron for NeuronType {
+    fn step(&mut self, dt: f32, input_current: f32) -> bool {
+        match self {
+            Self::Lif(n) => n.step(dt, input_current),
+            Self::Ref(n) => n.step(dt, input_current),
+        }
+    }
+    fn get_voltage(&self) -> f32 {        
+        match self {
+            Self::Lif(n) => n.get_voltage(),
+            Self::Ref(n) => n.get_voltage(),
+        }
     }
 }
